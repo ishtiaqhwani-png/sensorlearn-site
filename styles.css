@@ -8,7 +8,7 @@ body {
   
   .site-header {
     border-bottom: 1px solid #ddd;
-    padding: 18px 18px;
+    padding: 12px 18px;
   }
   
   .header-inner {
@@ -20,7 +20,7 @@ body {
   }
   
   .logo img {
-    height: 72px;
+    height: 60px;
   }
   
   nav a {
@@ -83,4 +83,5 @@ body {
   }
 
   
+
 
