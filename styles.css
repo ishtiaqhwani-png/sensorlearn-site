@@ -1,87 +1,109 @@
 body {
-    margin: 0;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    color: #111;
-    background: #fff;
-    line-height: 1.6;
-  }
-  
-  .site-header {
-    border-bottom: 1px solid #ddd;
-    padding: 12px 18px;
-  }
-  
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #111;
+  background: #fff;
+  line-height: 1.6;
+}
+
+.site-header {
+  border-bottom: 1px solid #ddd;
+  padding: 16px 18px; /* a bit more air for larger logo */
+}
+
+.header-inner {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.logo {
+  flex: 0 0 auto;
+}
+
+.logo img {
+  height: 40px;
+  width: auto;
+  display: block;
+}
+
+nav {
+  flex: 1 1 auto;              /* allow nav to shrink */
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;              /* row gap, column gap */
+  justify-content: flex-end;
+}
+
+nav a {
+  text-decoration: none;
+  color: #111;
+  white-space: nowrap;         /* keeps each item intact */
+}
+
+nav a:hover {
+  text-decoration: underline;
+}
+
+.content {
+  max-width: 860px;
+  margin: 40px auto;
+  padding: 0 18px;
+}
+
+h1 {
+  font-size: 1.8rem;
+}
+
+ul {
+  padding-left: 20px;
+}
+
+.cta {
+  margin-top: 40px;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+.cta-button {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 10px 14px;
+  border: 1px solid #111;
+  text-decoration: none;
+  color: #111;
+}
+
+.cta-button:hover {
+  background: #f3f3f3;
+}
+
+.site-footer {
+  margin-top: 60px;
+  border-top: 1px solid #ddd;
+  padding: 20px 18px;
+}
+
+.footer-inner {
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+@media (max-width: 720px) {
   .header-inner {
-    max-width: 960px;
-    margin: 0 auto;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  
-  .logo img {
-    height: 60px;
-  }
-  
-  nav a {
-    margin-left: 18px;
-    text-decoration: none;
-    color: #111;
-  }
-  
-  nav a:hover {
-    text-decoration: underline;
-  }
-  
-  .content {
-    max-width: 860px;
-    margin: 40px auto;
-    padding: 0 18px;
-  }
-  
-  h1 {
-    font-size: 1.8rem;
-  }
-  
-  ul {
-    padding-left: 20px;
-  }
-  
-  .cta {
-    margin-top: 40px;
-    padding: 20px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-  }
-  
-  .cta-button {
-    display: inline-block;
-    margin-top: 10px;
-    padding: 10px 14px;
-    border: 1px solid #111;
-    text-decoration: none;
-    color: #111;
-  }
-  
-  .cta-button:hover {
-    background: #f3f3f3;
-  }
-  
-  .site-footer {
-    margin-top: 60px;
-    border-top: 1px solid #ddd;
-    padding: 20px 18px;
-  }
-  
-  .footer-inner {
-    max-width: 960px;
-    margin: 0 auto;
-    display: flex;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 20px;
+    flex-direction: column;
+    align-items: flex-start;
   }
 
-  
-
-
+  nav {
+    justify-content: flex-start;
+  }
+}
