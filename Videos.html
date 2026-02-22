@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Video – Sensorlearn AB</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <a class="logo" href="index.html" aria-label="Sensorlearn AB">
+      <img src="sensorlearn-logo.svg" alt="Sensorlearn AB" />
+    </a>
+
+    <nav aria-label="Huvudmeny">
+      <a href="tech.html">Tekniska tjänster</a>
+      <a href="ip.html">Material & IP</a>
+      <a href="education.html">Utbildning</a>
+      <a href="collab.html">Samarbete</a>
+      <a href="videos.html" aria-current="page">Video</a>
+      <a href="about.html">Om</a>
+      <a href="contact.html">Kontakt</a>
+    </nav>
+  </div>
+</header>
+
+<main class="content">
+  <h1>Video</h1>
+  <p>Här samlar vi korta lektionsklipp och genomgångar från Sensorlearn AB:s kursutbud.</p>
+
+  <div class="video-controls">
+    <label for="courseFilter">Filtrera kurs:</label>
+    <select id="courseFilter">
+      <option value="all">Alla</option>
+      <option value="automation1">Automationsteknik nivå 1</option>
+      <option value="automation2">Automationsteknik nivå 2</option>
+      <option value="automation3">Automationsteknik nivå 3</option>
+      <option value="plc">PLC-programmering</option>
+      <option value="ellara">Praktisk ellära</option>
+      <option value="motor">Elmotorstyrning</option>
+      <option value="dator">Dator- och kommunikationsteknik</option>
+    </select>
+  </div>
+
+  <section class="video-grid" id="videoGrid">
+
+    <!-- EXAMPLE VIDEO CARD (duplicate and edit) -->
+    <article class="video-card" data-course="automation1">
+      <button class="video-thumb"
+        data-video-title="Automation 1: Grundläggande mätstorheter"
+        data-video-src="https://www.youtube-nocookie.com/embed/VIDEO_ID_1"
+        aria-label="Spela video: Automation 1: Grundläggande mätstorheter">
+        <span class="play-badge">▶</span>
+        <img src="https://i.ytimg.com/vi/VIDEO_ID_1/hqdefault.jpg" alt="">
+      </button>
+      <h3>Automation 1: Grundläggande mätstorheter</h3>
+      <p>Temperatur, tryck, flöde och nivå – begrepp och industriella exempel.</p>
+      <p class="meta">Kurs: Automationsteknik nivå 1 · Längd: 8–12 min</p>
+    </article>
+
+    <article class="video-card" data-course="plc">
+      <button class="video-thumb"
+        data-video-title="PLC: Digitala ingångar och utgångar"
+        data-video-src="https://www.youtube-nocookie.com/embed/VIDEO_ID_2"
+        aria-label="Spela video: PLC: Digitala ingångar och utgångar">
+        <span class="play-badge">▶</span>
+        <img src="https://i.ytimg.com/vi/VIDEO_ID_2/hqdefault.jpg" alt="">
+      </button>
+      <h3>PLC: Digitala ingångar och utgångar</h3>
+      <p>Hur signaler läses in och styr utgångar – struktur och felsökning.</p>
+      <p class="meta">Kurs: PLC-programmering · Längd: 10–15 min</p>
+    </article>
+
+  </section>
+
+  <div class="cta">
+    <h2>Vill du ha hela kursupplägg?</h2>
+    <p>Kontakta oss för kursleverans som konsult/underleverantör eller för företagsanpassade upplägg.</p>
+    <a class="cta-button" href="contact.html">Kontakta Sensorlearn AB</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div>
+      <strong>Sensorlearn AB</strong><br>
+      Org.nr 559394-8481<br>
+      www.sensorlearn.se
+    </div>
+    <div>
+      <strong>Kontakt</strong><br>
+      info@sensorlearn.se
+    </div>
+  </div>
+</footer>
+
+<!-- Modal -->
+<div class="video-modal" id="videoModal" aria-hidden="true">
+  <div class="video-modal-backdrop" data-close></div>
+  <div class="video-modal-panel" role="dialog" aria-modal="true" aria-labelledby="videoTitle">
+    <div class="video-modal-header">
+      <h2 id="videoTitle">Video</h2>
+      <button class="video-modal-close" type="button" data-close aria-label="Stäng">✕</button>
+    </div>
+    <div class="video-modal-body">
+      <iframe id="videoFrame"
+        title="Video"
+        width="560"
+        height="315"
+        src=""
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen></iframe>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Filter
+  const courseFilter = document.getElementById("courseFilter");
+  const cards = Array.from(document.querySelectorAll(".video-card"));
+
+  courseFilter.addEventListener("change", () => {
+    const v = courseFilter.value;
+    cards.forEach(card => {
+      const ok = (v === "all") || (card.dataset.course === v);
+      card.style.display = ok ? "" : "none";
+    });
+  });
+
+  // Modal playback
+  const modal = document.getElementById("videoModal");
+  const frame = document.getElementById("videoFrame");
+  const titleEl = document.getElementById("videoTitle");
+
+  function openModal(title, src) {
+    titleEl.textContent = title;
+    frame.src = src + "?autoplay=1";
+    modal.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeModal() {
+    frame.src = "";
+    modal.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+  }
+
+  document.querySelectorAll(".video-thumb").forEach(btn => {
+    btn.addEventListener("click", () => {
+      openModal(btn.dataset.videoTitle, btn.dataset.videoSrc);
+    });
+  });
+
+  modal.addEventListener("click", (e) => {
+    if (e.target.matches("[data-close]")) closeModal();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && modal.getAttribute("aria-hidden") === "false") closeModal();
+  });
+</script>
+
+</body>
+</html>
