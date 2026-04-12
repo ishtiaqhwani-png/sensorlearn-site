@@ -128,7 +128,7 @@ ul {
 
 .video-card iframe {
   width: 100%;
-  height: 500px; /* viktigt för YouTube Shorts */
+  height: 100px; /* viktigt för YouTube Shorts */
   border: none;
   border-radius: 10px;
   display: block;
