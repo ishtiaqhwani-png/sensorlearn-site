@@ -6,6 +6,8 @@ body {
   line-height: 1.6;
 }
 
+/* Header */
+
 .site-header {
   border-bottom: 1px solid #ddd;
   padding: 16px 18px;
@@ -48,6 +50,8 @@ nav a:hover {
   text-decoration: underline;
 }
 
+/* Content */
+
 .content {
   max-width: 860px;
   margin: 40px auto;
@@ -58,9 +62,16 @@ h1 {
   font-size: 1.8rem;
 }
 
+h2 {
+  margin-top: 40px;
+  font-size: 1.4rem;
+}
+
 ul {
   padding-left: 20px;
 }
+
+/* CTA */
 
 .cta {
   margin-top: 40px;
@@ -82,6 +93,8 @@ ul {
   background: #f3f3f3;
 }
 
+/* Footer */
+
 .site-footer {
   margin-top: 60px;
   border-top: 1px solid #ddd;
@@ -97,30 +110,13 @@ ul {
   gap: 20px;
 }
 
-/* Video controls */
-
-.video-controls {
-  margin: 18px 0 24px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.video-controls select {
-  padding: 8px 10px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  background: #fff;
-}
-
-/* Video grid */
+/* Video section */
 
 .video-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 18px;
-  margin-top: 10px;
+  margin-top: 20px;
 }
 
 .video-card {
@@ -130,51 +126,21 @@ ul {
   background: #fff;
 }
 
-.video-thumb {
-  position: relative;
+.video-card iframe {
   width: 100%;
-  border: 0;
-  padding: 0;
-  background: transparent;
-  cursor: pointer;
-}
-
-.video-thumb img {
-  width: 100%;
-  height: auto;
-  display: block;
+  height: 500px; /* viktigt för YouTube Shorts */
+  border: none;
   border-radius: 10px;
-}
-
-.play-badge {
-  position: absolute;
-  left: 12px;
-  top: 12px;
-  width: 44px;
-  height: 44px;
-  border-radius: 999px;
-  display: grid;
-  place-items: center;
-  background: rgba(17, 17, 17, 0.7);
-  color: #fff;
-  font-size: 18px;
-}
-
-.video-card h3 {
-  margin: 12px 0 6px;
-  font-size: 1.05rem;
+  display: block;
 }
 
 .video-card p {
-  margin: 0 0 8px;
-}
-
-.video-card .meta {
-  color: #444;
+  margin-top: 10px;
   font-size: 0.95rem;
+  color: #444;
 }
 
-/* Modal */
+/* Modal (om du använder senare) */
 
 .video-modal[aria-hidden="true"] {
   display: none;
@@ -216,10 +182,6 @@ ul {
   padding: 6px 10px;
   background: #fff;
   cursor: pointer;
-}
-
-.video-modal-body {
-  padding: 0;
 }
 
 .video-modal-body iframe {
