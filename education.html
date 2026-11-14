@@ -28,6 +28,7 @@
 </main>
 <footer class="site-footer"><div class="footer-inner"><strong>Sensorlearn AB · Org.nr 559394-8481</strong><a href="contact.html">Kontakt</a></div></footer>
 <script>
+(function(){var selected=new URLSearchParams(window.location.search).get('course');var select=document.getElementById('course');if(selected&&select&&Array.from(select.options).some(function(o){return o.value===selected;})){select.value=selected;}})();
 document.querySelectorAll('[data-course]').forEach(function(a){a.addEventListener('click',function(){document.getElementById('course').value=a.dataset.course;});});
 document.getElementById('interest').addEventListener('submit',function(e){e.preventDefault();var f=e.currentTarget;var d=new FormData(f);var fields=[['Namn','name'],['E-postadress','email'],['Telefon','phone'],['Företag/organisation','organization'],['Kurs','course'],['Meddelande','message']];var body=fields.map(function(pair){return pair[0]+': '+(d.get(pair[1])||'');}).join('\n');var subject='Intresseanmälan – '+d.get('course');document.getElementById('formstatus').textContent='Ditt e-postprogram öppnas. Kontrollera och skicka meddelandet där för att slutföra intresseanmälan.';window.location.href='mailto:info@sensorlearn.se?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);});
 </script>
