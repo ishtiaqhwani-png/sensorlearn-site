@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3D forward/reverse motor starter</title>
+<style>
+:root{--bg:#ffffff;--p:#1f1f1e;--s:#5f5e5a;--surface-1:#f1efe8;--border-strong:rgba(0,0,0,.35);--radius:8px;color-scheme:light}
+@media (prefers-color-scheme: dark){:root{--bg:#171717;--p:#ecebe5;--s:#a8a69c;--surface-1:#2c2c2a;--border-strong:rgba(255,255,255,.4);color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;padding:24px 16px;background:var(--bg);color:var(--p);font-family:Arial,Helvetica,sans-serif}
+main{max-width:860px;margin:0 auto}
+h1{font-size:20px;font-weight:500;margin:0 0 16px}
+button{background:transparent;color:var(--p);border:.5px solid var(--border-strong);border-radius:var(--radius);padding:8px 14px;font-size:14px;cursor:pointer;user-select:none}
+button:hover{background:var(--surface-1)}
+.row{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin:10px 0 6px}
+.lbl{font-size:14px;color:var(--s);display:flex;align-items:center;gap:6px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.card{background:var(--surface-1);border-radius:var(--radius);padding:10px 14px}
+.card .k{font-size:13px;color:var(--s)}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-size:13px;color:var(--s);margin-top:10px}
+.sw{display:inline-block;width:20px;border-top:3px solid;vertical-align:3px;margin-right:6px}
+</style>
+</head>
+<body>
+<main>
+<h1>3D forward/reverse motor starter</h1>
+<p class="lbl">Interactive teaching model · electrical and mechanical interlocking enabled by default</p>
+<div id="wrap" style="width:100%;min-height:380px;position:relative;touch-action:none;cursor:grab"></div>
+<div class="row" style="gap:8px">
+<button onclick="setView(0.45,0.32,125,5,24,4)">Perspective</button>
+<button onclick="setView(0,0.06,110,0,26,4)">Panel front</button>
+<button onclick="setView(0,1.45,125,5,24,4)">Top</button>
+<button onclick="setView(0.9,0.3,55,55,9,10)">Motor close-up</button>
+<span class="lbl">Drag to rotate, scroll to zoom</span>
+</div>
+<div class="row" style="gap:8px;margin-top:0">
+<button data-k="s2">Forward (S2)</button>
+<button data-k="s3">Reverse (S3)</button>
+<button data-k="s1">Stop (S1)</button>
+<button onclick="trip=true">Trip overload (F2)</button>
+<button onclick="trip=false">Reset F2</button>
+<button onclick="fault=false">Replace fuses F1</button>
+<button id="estop" type="button" onclick="activateEstop()" style="background:#c82023;color:white;border:3px solid #e3b930;font-weight:bold">NÖDSTOPP (S0)</button>
+<button type="button" onclick="resetEstop()">↻ Återställ nödstopp</button>
+</div>
+<div class="row" style="margin-top:0">
+<label class="lbl"><input type="checkbox" checked onchange="interlock=this.checked"> Electrical interlock (NC 21-22)</label>
+<label class="lbl"><input type="checkbox" checked onchange="mech=this.checked"> Mechanical interlock</label>
+<label class="lbl"><input type="checkbox" checked onchange="standLock=this.checked"> Standstill lock (ZS)</label>
+</div>
+<p id="safetyState" role="status" style="padding:10px;border:1px solid #aaa;border-radius:8px">Nödstopp återställt. Starta med Fram eller Back.</p><p class="lbl" style="font-size:12px">Pedagogisk simulering – inte en säkerhetsklassad nödstoppsfunktion.</p>
+<div class="cards" style="margin-top:10px">
+<div class="card"><div class="k">Direction</div><div id="cDir" style="font-size:18px;font-weight:500">Stopped</div></div>
+<div class="card"><div class="k">Speed</div><div id="cRpm" style="font-size:18px;font-weight:500">0 rpm</div></div>
+<div class="card" style="grid-column:span 2"><div class="k">Status</div><div id="stat" style="font-size:14px;font-weight:500;margin-top:4px">Stopped. Press Forward (S2) or Reverse (S3).</div></div>
+</div>
+<div class="legend">
+<span><span class="sw" style="border-color:#378ADD"></span>Forward current (K1)</span>
+<span><span class="sw" style="border-color:#D85A30"></span>Reverse current (K2)</span>
+<span><span class="sw" style="border-color:#EF9F27"></span>Control circuit live</span>
+<span><span class="sw" style="border-color:#E24B4A"></span>Short circuit / blocked</span>
+</div>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+var wrap=document.getElementById('wrap');
+var W=wrap.clientWidth||680,H=Math.round(W*0.62);
+var scene=new THREE.Scene();
+var camera=new THREE.PerspectiveCamera(40,W/H,1,600);
+var renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+renderer.setClearColor(0x000000,0);renderer.setSize(W,H);renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
+wrap.appendChild(renderer.domElement);
+scene.add(new THREE.AmbientLight(0xffffff,0.7));
+var dl=new THREE.DirectionalLight(0xffffff,0.8);dl.position.set(30,70,60);scene.add(dl);
+var dl2=new THREE.DirectionalLight(0xffffff,0.3);dl2.position.set(-50,30,40);scene.add(dl2);
+var grid=new THREE.GridHelper(170,34,0x888888,0x888888);grid.material.transparent=true;grid.material.opacity=0.2;scene.add(grid);
+function mat(c,s){return new THREE.MeshPhongMaterial({color:c,shininess:s||30})}
+function add(m,x,y,z){m.position.set(x,y,z);scene.add(m);return m}
+function box(w,h,d,c,x,y,z,s){return add(new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(c,s)),x,y,z)}
+function cyl(r,l,c,x,y,z,ax,s){var m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,l,20),mat(c,s));if(ax==='z')m.rotation.x=Math.PI/2;if(ax==='x')m.rotation.z=Math.PI/2;return add(m,x,y,z)}
+function led(x,y,z,r){return add(new THREE.Mesh(new THREE.SphereGeometry(r||0.6,12,12),new THREE.MeshBasicMaterial({color:0x555555})),x,y,z)}
+function lbl(t,x,y,z,s){var c=document.createElement('canvas');c.width=192;c.height=64;var g=c.getContext('2d');g.fillStyle='rgba(255,255,255,0.9)';g.fillRect(0,0,192,64);g.strokeStyle='rgba(0,0,0,0.35)';g.lineWidth=2;g.strokeRect(1,1,190,62);g.fillStyle='#1f1f1e';g.font='bold 34px Arial';g.textAlign='center';g.textBaseline='middle';g.fillText(t,96,34);var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c)}));sp.scale.set(10*(s||1),3.3*(s||1),1);return add(sp,x,y,z)}
+var DEAD=0x4a4f56,LIVE=0x8fa3b8,BLUE=0x378ADD,ORG=0xD85A30,AMB=0xEF9F27,RED=0xE24B4A,GRN=0x7CD14B;
+var groups={sup:[],k1b:[],k2b:[],mot:[],ctrl:[]};
+function tb(g,pts,r){var c=new THREE.CatmullRomCurve3(pts.map(function(p){return new THREE.Vector3(p[0],p[1],p[2])}));var m=new THREE.Mesh(new THREE.TubeGeometry(c,28,r||0.35,6,false),new THREE.MeshPhongMaterial({color:DEAD,shininess:30}));scene.add(m);groups[g].push(m)}
+function colr(g,c){groups[g].forEach(function(m){m.material.color.set(c)})}
+function setLed(l,c){l.material.color.set(c===null?0x555555:c)}
+box(84,54,1,0xd8d4ca,0,27,-0.5,10);
+[44,28,14].forEach(function(y){box(76,2.5,0.8,0x9aa0a6,0,y,0.4,60)});
+var fx=[-30,-26,-22],K1x=[-17.5,-14,-10.5],K2x=[-3.5,0,3.5],fuseM=[];
+fx.forEach(function(x,i){fuseM.push(box(3,8,5,0x9aa0a6,x,44,2.5,40));box(2.4,1.2,4,0x555b61,x,48.4,2.5,20);tb('sup',[[x,48,3],[x,50,4],[x,52,5]]);lbl('L'+(i+1),x,54.5,5,0.6)});
+lbl('F1',-26,38.8,8.5,0.6);
+var yR=[36.3,37.3,38.3],zR=[6,7,8],yJ=[40.5,42,43.5],zJ=[6.5,7.5,8.5];
+for(var i=0;i<3;i++){
+tb('sup',[[fx[i],40,3.5],[fx[i],yR[i]-0.3,zR[i]],[K1x[i],yR[i]-0.3,zR[i]],[K1x[i],34.4,5.5]]);
+tb('sup',[[K1x[i],34.4,5.5],[K1x[i],yJ[i],zJ[i]],[K2x[i],yJ[i],zJ[i]],[K2x[i],34.4,5.5]]);
+tb('k1b',[[K1x[i],21.6,5.5],[K1x[i],19.8,5.9],[K1x[i],18.4,5.5]]);
+}
+var tg=[2,1,0],yR2=[20.6,20.0,19.4],zR2=[6.6,7.3,8.0];
+for(var j=0;j<3;j++)tb('k2b',[[K2x[j],21.6,5.5],[K2x[j],yR2[j],zR2[j]],[K1x[tg[j]],yR2[j],zR2[j]],[K1x[tg[j]],18.4,5.5]]);
+for(var m=0;m<3;m++)tb('mot',[[K1x[m],9.8,5.5],[K1x[m],6.5,6+m*0.8],[20,4.5,8+m*0.8],[44,5.5,9+m*0.6],[52+3*m,12,10.5],[52+3*m,15.6,10]]);
+function mkK(xc,name){box(11,12,8,0x2b2d31,xc,28,4,20);[-3.5,0,3.5].forEach(function(d){cyl(0.7,1,0xb8bec4,xc+d,34.3,5.5,'y',80);cyl(0.7,1,0xb8bec4,xc+d,21.7,5.5,'y',80)});lbl(name,xc,31.2,8.4,0.7);box(5.6,2.6,0.3,0x3d4046,xc,27.2,8.1,10);var bar=box(4.6,0.9,0.4,0xE6C34A,xc,28.1,8.25,10);var l=led(xc+3.5,32.8,8.3,0.55);return{bar:bar,led:l}}
+var K1v=mkK(-14,'K1'),K2v=mkK(0,'K2');
+var mechB=box(2.6,6,5,0xE6C34A,-7,28,3.5,20);
+box(11,8,7,0x9aa0a6,-14,14,3.5,40);
+[-3.5,0,3.5].forEach(function(d){cyl(0.7,1,0xb8bec4,-14+d,18.1,5.5,'y',80);cyl(0.7,1,0xb8bec4,-14+d,9.9,5.5,'y',80)});
+cyl(1.4,0.8,0xD8702E,-16.5,13.5,7.3,'z',30);box(2.6,1.8,0.8,0xA32D2D,-11,13.5,7.3,30);
+var f2flag=box(1.2,1,0.4,0x555555,-11,16,7.3,10);lbl('F2',-26,14,6,0.6);
+box(14,26,2,0x6b6f76,-54,22,1,30);box(2,9,2,0x6b6f76,-54,4.5,1,20);
+var btn={};
+[['s2',35,0x639922,'S2 FWD'],['s3',28,0x378ADD,'S3 REV'],['s1',21,0xE24B4A,'S1 STOP']].forEach(function(b){cyl(2.8,0.8,0x2b2d31,-54,b[1],2.2,'z',20);btn[b[0]]={m:cyl(2,1.6,b[2],-54,b[1],2.8,'z',60),y:b[1]};lbl(b[3],-69,b[1],3,0.75)});
+var zsL=led(-54,13,2.8,1.4);lbl('ZS',-69,13,3,0.6);
+var estop3d=cyl(3.6,1.5,0xc82023,-54,43,3,'z',40);lbl('S0 E-STOP',-69,43,3,0.7);
+tb('ctrl',[[-54,9,2],[-50,5,5],[-43,6,8],[-36,11,7]],0.45);
+cyl(7,18,0x5f6670,55,8.5,10,'x',40);for(var k=0;k<6;k++)cyl(7.25,0.5,0x4d535b,48+k*3.2,8.5,10,'x',20);
+box(14,1.5,12,0x3d434b,55,0.75,10,10);cyl(5.5,2,0x4a4f56,65.5,8.5,10,'x',20);cyl(6.8,3,0x2b2d31,45.5,8.5,10,'x',20);cyl(1.2,6,0xd0d5db,69,8.5,10,'x',90);
+box(8,1.2,4,0x2b2d31,55,16,10,10);for(var q=0;q<3;q++)cyl(0.6,0.5,0xb8bec4,52+3*q,16.8,10,'y',80);
+var rotor=new THREE.Group();rotor.position.set(68.5,8.5,10);scene.add(rotor);
+var disc=new THREE.Mesh(new THREE.CylinderGeometry(3.2,3.2,0.8,24),mat(0xcfd4da,60));disc.rotation.z=Math.PI/2;rotor.add(disc);
+var mk=new THREE.Mesh(new THREE.BoxGeometry(0.9,1.4,1.4),mat(0xD8702E,30));mk.position.set(0.4,2.4,0);rotor.add(mk);
+lbl('M1',55,22,10,0.8);lbl('U1 V1 W1',55,19.6,10,0.7);
+var az=0.45,el=0.32,R=125,tgt=new THREE.Vector3(5,24,4);
+function cam(){camera.position.set(tgt.x+R*Math.sin(az)*Math.cos(el),tgt.y+R*Math.sin(el),tgt.z+R*Math.cos(az)*Math.cos(el));camera.lookAt(tgt)}
+function setView(a,e,r,x,y,z){az=a;el=e;R=r;tgt.set(x,y,z);cam()}
+var drag=false,lx=0,ly=0;
+wrap.addEventListener('pointerdown',function(e){drag=true;lx=e.clientX;ly=e.clientY;wrap.style.cursor='grabbing'});
+window.addEventListener('pointerup',function(){drag=false;wrap.style.cursor='grab'});
+window.addEventListener('pointermove',function(e){if(!drag)return;az-=(e.clientX-lx)*0.008;el=Math.max(0.05,Math.min(1.5,el+(e.clientY-ly)*0.006));lx=e.clientX;ly=e.clientY;cam()});
+wrap.addEventListener('wheel',function(e){e.preventDefault();R=Math.max(30,Math.min(220,R*Math.exp(e.deltaY*0.001)));cam()},{passive:false});
+window.addEventListener('resize',function(){W=wrap.clientWidth||680;H=Math.round(W*0.62);renderer.setSize(W,H);camera.aspect=W/H;camera.updateProjectionMatrix()});
+cam();
+function $(i){return document.getElementById(i)}
+var held={s1:false,s2:false,s3:false},t0={};
+document.querySelectorAll('[data-k]').forEach(function(b){var k=b.dataset.k;
+b.addEventListener('pointerdown',function(){held[k]=true;t0[k]=Date.now()});
+function rel(){if(!held[k])return;var w=Math.max(0,180-(Date.now()-t0[k]));setTimeout(function(){held[k]=false},w)}
+b.addEventListener('pointerup',rel);b.addEventListener('pointerleave',rel);b.addEventListener('pointercancel',rel)});
+var estopActive=false,requireRelease=false,prevTrip=false,prevFault=false;
+function activateEstop(){estopActive=true;requireRelease=true;c1=false;c2=false;coil1=false;coil2=false;held.s2=false;held.s3=false;document.getElementById("safetyState").textContent="NÖDSTOPP AKTIVERAT – återställ och starta manuellt."}
+function resetEstop(){estopActive=false;c1=false;c2=false;coil1=false;coil2=false;requireRelease=true;document.getElementById("safetyState").textContent="Nödstopp återställt. Släpp startknapparna och starta på nytt."}
+var c1=false,c2=false,coil1=false,coil2=false,trip=false,interlock=true,mech=true,standLock=true,fault=false,faultT=0,omega=0,ang=0,last=null;
+function step(ts){
+if(last===null)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;
+if(trip&&!prevTrip)requireRelease=true;
+if(fault&&!prevFault)requireRelease=true;
+prevTrip=trip;prevFault=fault;
+if(requireRelease&&!held.s2&&!held.s3&&!trip&&!fault&&!estopActive)requireRelease=false;
+var f2ok=!trip,common=f2ok&&!held.s1&&!estopActive&&!fault;
+var turning=Math.abs(omega)>0.03;
+var allow2=!(standLock&&omega<-0.03),allow3=!(standLock&&omega>0.03);
+coil1=common&&((held.s2&&!requireRelease&&allow2)||c1)&&!(interlock&&c2);
+var n1=coil1&&!(mech&&c2);
+coil2=common&&((held.s3&&!requireRelease&&allow3)||c2)&&!(interlock&&n1);
+var n2=coil2&&!(mech&&n1);
+var mb1=coil1&&!n1,mb2=coil2&&!n2;
+c1=n1;c2=n2;
+if(c1&&c2&&!fault){fault=true;faultT=0.7}
+if(fault)faultT-=dt;
+var powered=!fault&&(c1!==c2),dir=c1?1:-1;
+if(powered)omega+=(dir-omega)*Math.min(1,dt/0.7);
+else{var dec=dt/(fault?1.0:2.0);omega=Math.abs(omega)<=dec?0:omega-(omega>0?dec:-dec)}
+ang+=omega*dt*7;rotor.rotation.x=-ang;
+K1v.bar.position.y=c1?26.9:28.1;K2v.bar.position.y=c2?26.9:28.1;
+setLed(K1v.led,coil1?(mb1?RED:AMB):null);setLed(K2v.led,coil2?(mb2?RED:AMB):null);
+mechB.visible=mech;mechB.material.color.set((mb1||mb2)?RED:0xE6C34A);
+f2flag.material.color.set(trip?RED:0x555555);
+fuseM.forEach(function(f){f.material.color.set(fault?RED:0x9aa0a6)});
+var flash=fault&&faultT>0;
+colr('sup',fault?DEAD:LIVE);
+colr('k1b',c1&&(!fault||flash)?(fault?RED:BLUE):DEAD);
+colr('k2b',c2&&(!fault||flash)?(fault?RED:ORG):DEAD);
+colr('mot',powered?(c1?BLUE:ORG):DEAD);
+colr('ctrl',common?AMB:DEAD);
+['s1','s2','s3'].forEach(function(k){btn[k].m.position.z=held[k]?2.1:2.8});
+setLed(zsL,turning?null:GRN);
+estop3d.material.color.set(estopActive?0xff2929:0xc82023);
+document.getElementById("estop").setAttribute("aria-pressed",String(estopActive));
+document.getElementById("safetyState").style.background=estopActive?"#ffe0df":"transparent";
+var rpm=Math.round(Math.abs(omega)*1450);
+var dtxt=Math.abs(omega)<0.02?'Stopped':(omega>0?'Forward (CW)':'Reverse (CCW)');
+$('cDir').textContent=dtxt;$('cRpm').textContent=rpm+' rpm';
+var s;
+if(estopActive)s='NÖDSTOPP S0 AKTIVERAT. Återställ och starta manuellt.';
+else if(fault)s='Short circuit between L1 and L3: F1 fuses blown. Press Stop, then replace the fuses.';
+else if(trip)s='F2 has tripped: both contactors dropped. Reset F2 first.';
+else if(mb1||mb2)s=(mb2?'K2':'K1')+' coil is energized but mechanically blocked by '+(mb2?'K1':'K2')+': the contacts cannot close, so no short circuit. Press Stop.';
+else if(interlock&&((held.s3&&c1)||(held.s2&&c2)))s='Ignored: '+(c1?'K1':'K2')+' is still closed. Press Stop (S1) first, then the other direction.';
+else if(common&&((held.s3&&!allow3)||(held.s2&&!allow2)))s='Blocked by the standstill lock: the motor is still turning ('+rpm+' rpm). Wait until it has stopped.';
+else if(powered&&omega*dir<-0.2)s='Reversing while the motor is still turning: high current peak. Wait for standstill.';
+else if(c1)s='K1 closed: forward. To reverse, press Stop (S1) first, then Reverse (S3).';
+else if(c2)s='K2 closed: reverse (L1 and L3 swapped). To change direction, press Stop (S1) first, then Forward (S2).';
+else if(turning)s='Contactors off: motor stopping. A direction change is possible once it has stopped.';
+else s='Stopped. Press Forward (S2) or Reverse (S3).';
+$('stat').textContent=s;
+renderer.render(scene,camera);
+requestAnimationFrame(step)}
+requestAnimationFrame(step);
+</script>
+</body>
+</html>
