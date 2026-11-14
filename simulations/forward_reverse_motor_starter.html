@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Forward/reverse motor starter with two contactors</title>
+<style>
+:root{--bg:#ffffff;--p:#1f1f1e;--s:#5f5e5a;--surface-1:#f1efe8;--border:rgba(0,0,0,.15);--border-strong:rgba(0,0,0,.35);--radius:8px;color-scheme:light}
+@media (prefers-color-scheme: dark){:root{--bg:#171717;--p:#ecebe5;--s:#a8a69c;--surface-1:#2c2c2a;--border:rgba(255,255,255,.18);--border-strong:rgba(255,255,255,.4);color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;padding:24px 16px;background:var(--bg);color:var(--p);font-family:Arial,Helvetica,sans-serif}
+main{max-width:760px;margin:0 auto}
+h1{font-size:20px;font-weight:500;margin:0 0 16px}
+svg{display:block;width:100%;height:auto}
+.t{font-size:14px;fill:var(--p)}
+.ts{font-size:12px;fill:var(--s)}
+.th{font-size:14px;font-weight:500;fill:var(--p)}
+button{background:transparent;color:var(--p);border:.5px solid var(--border-strong);border-radius:var(--radius);padding:8px 14px;font-size:14px;cursor:pointer;user-select:none}
+button:hover{background:var(--surface-1)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0 6px}
+.lbl{font-size:14px;color:var(--s)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.card{background:var(--surface-1);border-radius:var(--radius);padding:10px 14px}
+.card .k{font-size:13px;color:var(--s)}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-size:13px;color:var(--s);margin-top:10px}
+.sw{display:inline-block;width:20px;border-top:3px solid;vertical-align:3px;margin-right:6px}
+
+/* Added operator door; original circuit SVG and symbols remain unchanged. */
+.operator-door{margin:18px 0;padding:18px;border:3px solid #858b90;border-radius:12px;background:linear-gradient(145deg,#e1e5e7,#bfc6cb);color:#182126;box-shadow:inset 0 0 0 3px #f4f6f7,0 5px 14px rgba(0,0,0,.12)}
+.door-heading{display:flex;justify-content:space-between;align-items:center;font-size:15px;font-weight:700;margin-bottom:17px;gap:12px}
+.door-heading small{font-size:11px;font-weight:400;color:#3b474d}
+.door-layout{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;align-items:start;text-align:center}
+.door-unit{display:flex;align-items:center;flex-direction:column;gap:7px;font-size:12px;font-weight:700}
+.door-unit button{padding:0;border:0;background:transparent;border-radius:50%;touch-action:none;display:grid;place-items:center}
+.door-unit button:hover{background:transparent}
+.door-unit button:focus-visible{outline:3px solid #1661ac;outline-offset:5px}
+.pushbutton{width:59px;height:59px;border-radius:50%;display:grid;place-items:center;border:7px solid #252b2d;box-shadow:0 3px 0 #6c7477, inset 0 3px 7px rgba(255,255,255,.4);color:#fff;font-size:20px}
+.door-unit button:active .pushbutton{transform:translateY(3px);box-shadow:inset 0 3px 5px rgba(0,0,0,.3)}
+.pushbutton.green{background:#178449}.pushbutton.red{background:#c7332e}.pushbutton.mushroom{background:#c82023;width:72px;height:72px;border:9px solid #e3b930;box-shadow:0 3px 0 #596167,inset 0 4px 4px rgba(255,255,255,.25)}
+.lamp{width:40px;height:40px;border-radius:50%;border:6px solid #3b4245;box-shadow:inset 0 3px 6px rgba(0,0,0,.45);background:#496351;transition:background .1s,box-shadow .1s}
+.lamp.green.on{background:#20f46a;box-shadow:0 0 17px #20d965,inset 0 1px 6px #d8ffe3}
+.lamp.amber{background:#65572e}.lamp.amber.on{background:#ffd12c;box-shadow:0 0 17px #ffc120,inset 0 1px 6px #fff4c0}
+.lamp.red{background:#663535}.lamp.red.on{background:#ff4545;box-shadow:0 0 17px #fa4444,inset 0 1px 6px #ffd4d4}
+.door-note{font-size:11px;color:#3d484e;margin:16px 0 0;text-align:center}
+@media(max-width:520px){.door-layout{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:20px}.operator-door{padding:14px}.door-heading{flex-direction:column;align-items:flex-start}}
+#estop.estop-latched .pushbutton.mushroom{transform:translateY(5px);box-shadow:inset 0 3px 7px rgba(0,0,0,.55),0 0 0 3px #ffb400}
+#resetEstop{font-weight:700;border:2px solid #b45309;background:#fff3cd;color:#5f3700}
+#resetEstop:disabled{opacity:.5;cursor:not-allowed;border-color:#777;background:transparent;color:inherit}
+</style>
+</head>
+<body>
+<main>
+<h1>Forward/reverse motor starter with two contactors</h1>
+<svg id="sim" viewBox="0 0 680 540" role="img" aria-label="Power circuit and control circuit for forward and reverse control of a three-phase motor"></svg>
+<section class="operator-door" aria-label="Control panel door">
+<div class="door-heading"><span>CONTROL PANEL · MOTOR M1</span><small>Operator door / manöverpanel</small></div>
+<div class="door-layout">
+<div class="door-unit"><button data-k="s2" aria-label="Forward S2"><span class="pushbutton green">▶</span></button><span>FORWARD · S2</span></div>
+<div class="door-unit"><button data-k="s1" aria-label="Stop S1"><span class="pushbutton red">■</span></button><span>STOP · S1</span></div>
+<div class="door-unit"><button data-k="s3" aria-label="Reverse S3"><span class="pushbutton green">◀</span></button><span>REVERSE · S3</span></div>
+<div class="door-unit"><button id="estop" aria-label="Aktivera nödstopp" aria-pressed="false"><span class="pushbutton mushroom">●</span></button><span>E-STOP · S0</span></div>
+<div class="door-unit"><span class="lamp green" id="lampFwd" role="img" aria-label="Forward running indicator"></span><span>FORWARD · H1</span></div>
+<div class="door-unit"><span class="lamp amber" id="lampStopped" role="img" aria-label="Motor stopped indicator"></span><span>STOPPED · H2</span></div>
+<div class="door-unit"><span class="lamp green" id="lampRev" role="img" aria-label="Reverse running indicator"></span><span>REVERSE · H3</span></div>
+<div class="door-unit"><span class="lamp red" id="lampFault" role="img" aria-label="Fault indicator"></span><span>FAULT · H4</span></div>
+</div>
+<div class="row" style="justify-content:center;margin-top:18px"><button id="resetEstop" type="button" disabled>↻ ÅTERSTÄLL NÖDSTOPP (S0)</button></div>
+<p class="door-note">The panel controls the original electrical diagrams above. Emergency stop is a teaching simulation, not a safety-rated circuit.</p>
+</section>
+<div class="row">
+<button data-k="s2">Forward (S2)</button>
+<button data-k="s3">Reverse (S3)</button>
+<button data-k="s1">Stop (S1)</button>
+<button onclick="trip=true">Trip overload (F2)</button>
+<button onclick="trip=false">Reset F2</button>
+</div>
+<div class="row" style="margin-top:0">
+<label class="lbl" style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="ilk" checked onchange="interlock=this.checked"> Interlock enabled (NC contacts 21-22)</label>
+<button onclick="fault=false">Replace fuses F1</button>
+</div>
+<div class="cards" style="margin-top:10px">
+<div class="card"><div class="k">Direction</div><div id="cDir" style="font-size:18px;font-weight:500">Stopped</div></div>
+<div class="card"><div class="k">Speed</div><div id="cRpm" style="font-size:18px;font-weight:500">0 rpm</div></div>
+<div class="card" style="grid-column:span 2"><div class="k">Status</div><div id="stat" style="font-size:14px;font-weight:500;margin-top:4px">Stopped. Press Forward (S2) or Reverse (S3).</div></div>
+</div>
+<div class="legend">
+<span><span class="sw" style="border-color:#378ADD"></span>Forward current (K1)</span>
+<span><span class="sw" style="border-color:#D85A30"></span>Reverse current (K2)</span>
+<span><span class="sw" style="border-color:#EF9F27"></span>Control circuit live</span>
+<span><span class="sw" style="border-color:#E24B4A"></span>Short circuit</span>
+</div>
+</main>
+<script>
+var NS='http://www.w3.org/2000/svg',svg=document.getElementById('sim');
+var BLUE='#378ADD',ORG='#D85A30',AMB='#EF9F27',RED='#E24B4A';
+function $(i){return document.getElementById(i)}
+function el(t,a){var e=document.createElementNS(NS,t);for(var k in a)e.setAttribute(k,a[k]);svg.appendChild(e);return e}
+function ln(x1,y1,x2,y2,w,d){var e=el('line',{x1:x1,y1:y1,x2:x2,y2:y2,'stroke-width':w||2,'stroke-linecap':'round'});e.style.stroke='var(--p)';if(d)e.setAttribute('stroke-dasharray',d);return e}
+function rc(x,y,w,h,sw){var e=el('rect',{x:x,y:y,width:w,height:h,rx:2,'stroke-width':sw||2});e.style.stroke='var(--p)';e.style.fill='none';return e}
+function tx(x,y,s,c,a){var e=el('text',{x:x,y:y,'text-anchor':a||'start','class':c||'ts'});e.textContent=s;return e}
+function dot(x,y){var e=el('circle',{cx:x,cy:y,r:3.5});e.style.fill='var(--p)'}
+var segs={};
+function S(n,pts){var e=el('polyline',{points:pts.map(function(p){return p.join(',')}).join(' '),fill:'none','stroke-linecap':'round','stroke-linejoin':'round'});(segs[n]=segs[n]||[]).push(e)}
+function paint(n,c){segs[n].forEach(function(e){if(c==='dead'){e.style.stroke='var(--p)';e.style.opacity=0.3;e.setAttribute('stroke-width',2)}else if(c==='live'){e.style.stroke='var(--p)';e.style.opacity=0.85;e.setAttribute('stroke-width',2.5)}else{e.style.stroke=c;e.style.opacity=1;e.setAttribute('stroke-width',3.5)}})}
+var C={};
+function contact(n,x,y1,y2,t){if(t==='nc')ln(x-12,y2,x,y2,2);var b=ln(x,y1,x,y2,2.5);C[n]={b:b,x:x,y1:y1,y2:y2,t:t};setC(n,t==='nc')}
+function setC(n,closed){var c=C[n],x2,y2;if(c.t==='no'){x2=closed?c.x:c.x-12;y2=c.y2}else{x2=closed?c.x-12:c.x-20;y2=closed?c.y2:c.y2-12}c.b.setAttribute('x2',x2);c.b.setAttribute('y2',y2)}
+function pb(x,m){ln(x-7,m,x-30,m,1.5,'4 3');ln(x-30,m-10,x-30,m+10,3)}
+rc(10,8,660,524,1);ln(335,20,335,520,1,'5 4').style.opacity=0.4;
+tx(170,24,'Power circuit','th','middle');tx(500,24,'Control circuit 230 V AC','th','middle');
+var X1=[60,100,140],X2=[200,240,280],fuses=[];
+['L1','L2','L3'].forEach(function(l,i){tx(X1[i],44,l,'th','middle');S('live',[[X1[i],50],[X1[i],80]]);var r=rc(X1[i]-6,80,12,34);ln(X1[i],80,X1[i],114);fuses.push(r);S('sup',[[X1[i],114],[X1[i],200]])});
+tx(158,100,'F1','th');
+S('sup',[[60,150],[200,150],[200,200]]);S('sup',[[100,160],[240,160],[240,200]]);S('sup',[[140,170],[280,170],[280,200]]);
+dot(60,150);dot(100,160);dot(140,170);
+for(var i=0;i<3;i++){contact('k1m'+i,X1[i],200,232,'no');contact('k2m'+i,X2[i],200,232,'no')}
+ln(54,216,134,216,1,'5 4');ln(194,216,274,216,1,'5 4');
+tx(46,220,'K1','th','end');tx(46,236,'FWD','ts','end');tx(292,220,'K2','th');tx(292,236,'REV','ts');
+S('k1b',[[60,232],[60,260]]);S('k1b',[[100,232],[100,270]]);S('k1b',[[140,232],[140,280]]);
+S('k2b',[[280,232],[280,260],[60,260]]);S('k2b',[[240,232],[240,270],[100,270]]);S('k2b',[[200,232],[200,280],[140,280]]);
+dot(60,260);dot(100,270);dot(140,280);
+S('mrg',[[60,260],[60,300]]);S('mrg',[[100,270],[100,300]]);S('mrg',[[140,280],[140,300]]);
+X1.forEach(function(x){rc(x-12,300,24,40);var z=el('polyline',{points:x+',300 '+x+',308 '+(x-8)+',315 '+(x+8)+',324 '+x+',332 '+x+',340',fill:'none','stroke-width':1});z.style.stroke='var(--p)'});
+tx(162,324,'F2','th');
+S('mot',[[60,340],[60,360],[80,380],[80,395]]);S('mot',[[100,340],[100,390]]);S('mot',[[140,340],[140,360],[120,380],[120,395]]);
+var mc=el('circle',{cx:100,cy:430,r:40,fill:'none','stroke-width':2});mc.style.stroke='var(--p)';
+var mt=tx(100,438,'M','th','middle');mt.setAttribute('font-size','22');tx(100,458,'3~','ts','middle');
+var rot=el('g',{});var mk=el('circle',{cx:100,cy:406,r:4});mk.style.fill=AMB;svg.removeChild(mk);rot.appendChild(mk);
+tx(54,376,'U1','ts','end');tx(106,376,'V1','ts');tx(146,376,'W1','ts');
+tx(150,420,'M1','th');var dirTx=tx(150,438,'Stopped','ts');
+var seqTx=tx(100,492,'No supply','ts','middle'),rpmTx=tx(100,510,'0 rpm','ts','middle');
+ln(378,60,405,60,2);tx(372,64,'L1','th','end');
+S('c_top',[[378,60],[405,60],[405,100]]);
+contact('f2',405,100,132,'nc');tx(395,120,'F2','th','end');
+S('c_f2s1',[[405,132],[405,150]]);
+contact('s1',405,150,182,'nc');pb(405,166);tx(371,170,'S1','th','end');
+S('c_com',[[405,182],[405,210],[585,210]]);
+S('a_top',[[460,210],[460,245]]);S('a_top',[[460,235],[505,235],[505,245]]);
+S('b_top',[[585,210],[585,245]]);S('b_top',[[585,235],[630,235],[630,245]]);
+dot(460,210);dot(460,235);dot(585,235);
+contact('s2',460,245,277,'no');pb(460,261);tx(424,265,'S2','th','end');
+contact('k1a',505,245,277,'no');tx(513,265,'K1','th');
+S('a_s2',[[460,277],[460,305]]);S('a_k1',[[505,277],[505,305],[460,305]]);dot(460,305);
+S('a_bot',[[460,305],[460,330]]);
+contact('k2nc',460,330,362,'nc');tx(450,348,'K2','th','end');tx(470,348,'21-22','ts');
+S('a_nc',[[460,362],[460,395]]);
+var coil1=rc(438,395,44,40);tx(430,420,'K1','th','end');tx(488,408,'A1','ts');tx(488,432,'A2','ts');
+S('a_ret',[[460,435],[460,520]]);
+contact('s3',585,245,277,'no');pb(585,261);tx(549,265,'S3','th','end');
+contact('k2a',630,245,277,'no');tx(638,265,'K2','th');
+S('b_s3',[[585,277],[585,305]]);S('b_k2',[[630,277],[630,305],[585,305]]);dot(585,305);
+S('b_bot',[[585,305],[585,330]]);
+contact('k1nc',585,330,362,'nc');tx(575,348,'K1','th','end');tx(595,348,'21-22','ts');
+S('b_nc',[[585,362],[585,395]]);
+var coil2=rc(563,395,44,40);tx(555,420,'K2','th','end');tx(613,408,'A1','ts');tx(613,432,'A2','ts');
+S('b_ret',[[585,435],[585,520]]);
+ln(440,520,650,520,2);dot(460,520);dot(585,520);tx(432,524,'N','th','end');
+var held={s1:false,s2:false,s3:false},t0={};
+document.querySelectorAll('[data-k]').forEach(function(b){var k=b.dataset.k;
+b.addEventListener('pointerdown',function(){held[k]=true;t0[k]=Date.now()});
+function rel(){if(!held[k])return;var w=Math.max(0,180-(Date.now()-t0[k]));setTimeout(function(){held[k]=false},w)}
+b.addEventListener('pointerup',rel);b.addEventListener('pointerleave',rel);b.addEventListener('pointercancel',rel)});
+var K1=false,K2=false,trip=false,interlock=true,fault=false,faultT=0,omega=0,ang=0,last=null;
+var estopActive=false;
+function updateEstopPanel(){
+  $('estop').setAttribute('aria-pressed',String(estopActive));
+  $('estop').classList.toggle('estop-latched',estopActive);
+  $('resetEstop').disabled=!estopActive;
+  $('resetEstop').textContent=estopActive?'↻ ÅTERSTÄLL NÖDSTOPP (S0)':'Nödstopp återställt';
+}
+$('estop').addEventListener('click',function(){estopActive=true;updateEstopPanel()});
+$('resetEstop').addEventListener('click',function(){
+  estopActive=false;
+  K1=false;K2=false;
+  held.s2=false;held.s3=false;
+  updateEstopPanel();
+});
+updateEstopPanel();
+function step(ts){
+if(last===null)last=ts;var dt=Math.min(0.05,(ts-last)/1000);last=ts;
+var f2ok=!trip,common=f2ok&&!held.s1&&!estopActive;
+var k1n=common&&(held.s2||K1)&&!(interlock&&K2);
+var k2n=common&&(held.s3||K2)&&!(interlock&&k1n);
+K1=k1n;K2=k2n;
+if(!interlock&&K1&&K2&&!fault){fault=true;faultT=0.7}
+if(fault)faultT-=dt;
+var powered=!fault&&(K1!==K2),dir=K1?1:-1;
+if(powered)omega+=(dir-omega)*Math.min(1,dt/0.7);
+else{var dec=dt/(fault?1.0:2.0);omega=Math.abs(omega)<=dec?0:omega-(omega>0?dec:-dec)}
+ang+=omega*dt*430;
+rot.setAttribute('transform','rotate('+ang+' 100 430)');
+for(var i=0;i<3;i++){setC('k1m'+i,K1);setC('k2m'+i,K2)}
+setC('k1a',K1);setC('k2a',K2);
+setC('k2nc',interlock?!K2:true);setC('k1nc',interlock?!K1:true);
+C.k2nc.b.style.opacity=interlock?1:0.3;C.k1nc.b.style.opacity=interlock?1:0.3;
+setC('s1',!held.s1);setC('s2',held.s2);setC('s3',held.s3);setC('f2',f2ok);
+paint('live','live');paint('sup',fault?'dead':'live');
+var flash=fault&&faultT>0;
+paint('k1b',K1&&(!fault||flash)?(fault?RED:BLUE):'dead');
+paint('k2b',K2&&(!fault||flash)?(fault?RED:ORG):'dead');
+var pc=powered?(K1?BLUE:ORG):'dead';paint('mrg',pc);paint('mot',pc);
+fuses.forEach(function(f){f.style.fill=fault?RED:'none'});
+var on=function(b){return b?AMB:'dead'};
+paint('c_top','live');paint('c_f2s1',on(f2ok));
+paint('c_com',on(common));paint('a_top',on(common));paint('b_top',on(common));
+paint('a_s2',on(common&&held.s2));paint('a_k1',on(common&&K1));paint('b_s3',on(common&&held.s3));paint('b_k2',on(common&&K2));
+paint('a_bot',on(common&&(held.s2||K1)));paint('b_bot',on(common&&(held.s3||K2)));
+paint('a_nc',on(K1));paint('b_nc',on(K2));paint('a_ret',on(K1));paint('b_ret',on(K2));
+coil1.style.fill=K1?AMB:'none';coil2.style.fill=K2?AMB:'none';
+var rpm=Math.round(Math.abs(omega)*1450);
+var dtxt=Math.abs(omega)<0.02?'Stopped':(omega>0?'Forward (CW)':'Reverse (CCW)');
+$('cDir').textContent=dtxt;$('cRpm').textContent=rpm+' rpm';dirTx.textContent=dtxt;rpmTx.textContent=rpm+' rpm';
+seqTx.textContent=powered?(K1?'U1=L1  V1=L2  W1=L3':'U1=L3  V1=L2  W1=L1'):'No supply to motor';
+var s;
+if(estopActive)s='NÖDSTOPP S0 AKTIVERAT. Klicka på ↻ ÅTERSTÄLL NÖDSTOPP, sedan FRAM eller BACK för att starta.';
+else if(fault)s='Short circuit between L1 and L3: F1 fuses blown. Press Stop, then replace the fuses.';
+else if(trip)s='F2 has tripped: both contactors dropped. Reset F2 first.';
+else if(interlock&&((held.s3&&K1)||(held.s2&&K2)))s='Ignored: '+(K1?'K1':'K2')+' is still closed. Press Stop (S1) first, then the other direction.';
+else if(powered&&omega*dir<-0.2)s='Reversing while the motor is still turning: high current peak. Wait for standstill.';
+else if(K1)s='K1 closed: forward. To reverse, press Stop (S1) first, then Reverse (S3).';
+else if(K2)s='K2 closed: reverse (L1 and L3 swapped). To change direction, press Stop (S1) first, then Forward (S2).';
+else if(Math.abs(omega)>0.02)s='Contactors off: motor stopping. You can press a direction once it has stopped.';
+else s='Stopped. Press Forward (S2) or Reverse (S3).';
+$('stat').textContent=s;
+$('lampFwd').classList.toggle('on',K1&&!fault&&!trip&&!estopActive);
+$('lampRev').classList.toggle('on',K2&&!fault&&!trip&&!estopActive);
+$('lampStopped').classList.toggle('on',!K1&&!K2&&!fault&&!trip&&!estopActive&&Math.abs(omega)<0.02);
+$('lampFault').classList.toggle('on',fault||trip||estopActive);
+requestAnimationFrame(step)}
+requestAnimationFrame(step);
+</script>
+</body>
+</html>
